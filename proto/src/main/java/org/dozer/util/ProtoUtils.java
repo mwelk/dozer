@@ -15,10 +15,7 @@
  */
 package org.dozer.util;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.ProtocolMessageEnum;
+import com.google.protobuf.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.Method;
@@ -109,10 +106,7 @@ public class ProtoUtils {
   }
 
   private static Class<? extends Enum> getEnumClassByEnumDescriptor(Descriptors.EnumDescriptor descriptor) {
-    return (Class<? extends Enum>)MappingUtils.loadClass(StringUtils.join(new String[]{
-            descriptor.getFile().getOptions().getJavaPackage(),
-            descriptor.getFile().getOptions().getJavaOuterClassname(),
-            descriptor.getFullName()}, '.'));
+    return (Class<? extends Enum>)MappingUtils.loadClass(getEnumClassName(descriptor));
   }
 
   public static Object wrapEnums(Object value) {
@@ -149,4 +143,32 @@ public class ProtoUtils {
     }
     return value;
   }
+
+    private static String getEnumClassName(Descriptors.EnumDescriptor descriptor) {
+
+        final Descriptors.FileDescriptor fileDescriptor = descriptor.getFile();
+        final String fullName = descriptor.getFullName();
+        final DescriptorProtos.FileOptions options = fileDescriptor.getOptions();
+
+        if (StringUtils.isNotBlank(options.getJavaPackage())
+                && StringUtils.isNotBlank(options.getJavaOuterClassname())) {
+
+            return StringUtils.join(new String[]{
+                    options.getJavaPackage(),
+                    options.getJavaOuterClassname(),
+                    fullName}, '.');
+        } else {
+            final String packageName = fileDescriptor.getPackage();
+
+            StringBuilder classNameBuilder = new StringBuilder();
+            //package
+            classNameBuilder.append(packageName).append(".");
+            //proto file name (outer class)
+            classNameBuilder.append(StringUtils.split(fileDescriptor.getName(), ".")[0]);
+            //outer class with enum
+            classNameBuilder.append(fullName.substring(packageName.length()));
+
+            return classNameBuilder.toString();
+        }
+    }
 }
